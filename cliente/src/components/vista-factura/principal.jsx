@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate,Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
     Background,
     ContPrincipal,
@@ -18,16 +18,17 @@ const Factura = ({ mesa }) => {
     const navigate = useNavigate()
     const [total, setTotal] = useState(0);
     const [filteredReservas, setFilteredReservas] = useState([]);
-    // const [borrarFactura, setBorrarFactura] = useState(false);
     const [lastInsertedId, setLastInsertedId] = useState(null)
     const [redirectToPayU,setRedirectToPayU] = useState(false)
-    const [idOrden, setIdOrden] = useState(null);
+    const [numMesa, setNumMesa] = useState(null); // Cambio de numOrden a numMesa
     const { mesaData } = useDataState();
     const mesaSeleccionada = mesa ?? mesaData[0]?.id_mesa;
+
     useEffect(() => {
         setFilteredReservas(mesaData);
         calculateTotal();
     }, [mesaData]);
+
     useEffect(() => {
         mesaFunctions.getAllMesa(mesa)
             .then(response => {
@@ -41,6 +42,7 @@ const Factura = ({ mesa }) => {
             })
             .catch(error => console.error('Error fetching data:', error));
     }, [mesa]);
+
     const calculateTotal = () => {
         const pedidosConProductos = mesaData.filter(
             (item) => item.producto && item.precio
@@ -54,7 +56,7 @@ const Factura = ({ mesa }) => {
         }, 0);
         setTotal(totalAmount);
     };
-    
+
     const handleIrRegistroFact = async () => {
         try {
             const fecha_factura = moment().format('YYYY/MM/DD, HH:mm:ss a');
@@ -69,10 +71,28 @@ const Factura = ({ mesa }) => {
                 productos,
                 fecha_factura,
             };
+
+            // Asegúrate de que numMesa sea un valor numérico
+            const idMesaNumerico = parseInt(numMesa, 10);
+            if (!isNaN(idMesaNumerico)) {
+                facturaData.id_mesa = idMesaNumerico;
+            }
+
+            // Realiza una solicitud POST para registrar la factura junto con id_mesa
             const response = await axios.post('http://localhost:3002/api/registro', facturaData);
+            console.log('Respuesta del servidor:', response.data);
+
             if (response.status === 200) {
-                // La factura se ha registrado correctamente, ahora eliminemos la orden
-                await eliminarOrden();
+                console.log('La factura se ha registrado correctamente.');
+
+                const id_orden = response.data.numOrden;
+                console.log('Valor de id_orden:', id_orden); 
+                if (id_orden !== null && id_orden !== undefined) {
+                    setNumMesa(id_orden);
+                    await handleEliminarRegistros();
+                } else {
+                    console.error('id_mesa no es un número válido.');
+                }
             } else {
                 console.error('Error en la solicitud POST:', response.statusText);
             }
@@ -80,39 +100,32 @@ const Factura = ({ mesa }) => {
             console.error('Error al procesar la factura:', error);
         }
     };
-    
-    const eliminarOrden = async () => {
+
+    const handleEliminarRegistros = async () => {
         try {
-            // Aquí puedes obtener el id_orden que deseas eliminar
-            const idOrdenEntero = parseInt(idOrden);
-            console.log("Valor de idOrden:", idOrdenEntero);
-            const deleteOrdenResponse = await axios.delete(`http://localhost:3002/api/orden_id/${idOrdenEntero}`);
-            if (deleteOrdenResponse.status === 204) {
-                console.log(`Orden con id ${idOrden} eliminada correctamente.`);
-                setIdOrden(idOrdenEntero);   
+            console.log('Entrando en handleEliminarRegistros');
+            console.log('Valor de idMesa antes de la conversión:', numMesa);
+            const idMesaInt = parseInt(numMesa);
+            console.log('Valor de idMesaInt:', idMesaInt);
+
+            if (!isNaN(idMesaInt)) {
+                const response = await axios.delete(`http://localhost:3002/api/mesa_id/${idMesaInt}`);
+                console.log('Número de mesa eliminado:', idMesaInt);
+                console.log(response);
+                if (response.status === 200) {
+                    console.log('Registros eliminados correctamente.');
+                    // Estableces el id_mesa eliminado en el estado
+                    setNumMesa(idMesaInt);
+                } else {
+                    console.error('Error al eliminar registros:', response.statusText);
+                }
             } else {
-                console.error(
-                    "Error al eliminar datos en la tabla orden:",
-                    deleteOrdenResponse.statusText
-                );
+                console.error('idMesa no es un número válido.');
             }
-        } catch (deleteError) {
-            console.error("Error al ejecutar la solicitud DELETE:", deleteError);
+        } catch (error) {
+            console.error('Error al eliminar registros:', error);
         }
-    
-        // Después de eliminar la orden, redirige al usuario a la página de registro de facturas
-        setRedirectToPayU(true);
     };
-    
-
-
-
-    if (redirectToPayU) {
-        const payUUrl = `/pago=${total}`
-        window.location.href = payUUrl
-    }
-
-    
 
     const handlePrintClick = () => {
         window.print();
@@ -154,6 +167,7 @@ const Factura = ({ mesa }) => {
                                     <td style={{color:"white"}}>{pedido.precio}</td>
                                 </tr>
                             ))}
+                            
                         </tbody>
                     </table>
                 </ContFactura>
@@ -167,6 +181,7 @@ const Factura = ({ mesa }) => {
                     <BotonImprimir onClick={handlePrintClick}>Imprimir factura</BotonImprimir>
                     <Link to="/private/todofisica/registro-fact">
                         <BotonImprimir id="registrarFacturaButton" onClick={handleIrRegistroFact}>Ir a registro de facturas</BotonImprimir>
+                        <BotonImprimir onClick={handleEliminarRegistros} style={{ marginTop: '20px' }}> Eliminar Registros de la Factura </BotonImprimir>
                     </Link>
                 </ContBoton>
             </ContPrincipal>

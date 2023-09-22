@@ -34,24 +34,50 @@ export const createMesa = async (req, res) => {
     }
 };
 
-export const deleteOrdenPorId = async (req, res) => {
-    const id_orden = parseInt(req.params.id_orden);
-    console.log("Valor de id_orden recibido:", id_orden);
-        try {
-            const deleteQuery = `
-            DELETE FROM orden
-            WHERE id_orden = ?
-            `;
-    const result = await pool.query(deleteQuery, [id_orden]);
-        if (result.affectedRows > 0) {
-        console.log(`Orden con id_orden ${id_orden} eliminada correctamente.`);
-        res.status(204).send();
-        } else {
-        console.error(`No se encontraron registros con id_orden ${id_orden} para eliminar.`);
-        res.status(404).send();
+
+export const deleteOrdenPorMesa = async (req, res) => {
+    try {
+        const id_mesa = parseInt(req.params.id_mesa);
+        console.log("Valor de id_mesa recibido:", id_mesa);
+
+        // Realiza una solicitud GET para obtener registros de la mesa correspondiente
+        const selectQuery = `
+            SELECT id_orden
+            FROM orden
+            WHERE id_mesa = ?
+        `;
+        const result = await pool.query(selectQuery, [id_mesa]);
+
+        if (result.length === 0) {
+            console.error(`No se encontraron registros para la mesa con id_mesa ${id_mesa}.`);
+            return res.status(404).json({ message: 'No encontrado' });
         }
-        } catch (error) {
-        console.error(`Error al eliminar la orden con id_orden ${id_orden}: ${error.message}`);
-        res.status(500).json({ error: error.message });
+
+        const id_ordenes = result.map(row => row.id_orden);
+
+        // Procede a eliminar los registros específicos en la tabla "orden"
+        const deleteQuery = `
+            DELETE FROM orden
+            WHERE id_orden IN (?)
+        `;
+        const deleteResult = await pool.query(deleteQuery, [id_ordenes]);
+
+        if (deleteResult.affectedRows > 0) {
+            console.log(`Registros de la mesa con id_mesa ${id_mesa} eliminados correctamente.`);
+
+            // Devuelve la lista de id_ordenes eliminados en la respuesta
+            return res.status(200).json({ id_ordenes });
+        } else {
+            console.error(`No se encontraron registros para la mesa con id_mesa ${id_mesa} para eliminar.`);
+            return res.status(404).json({ message: 'No encontrado' });
+        }
+    } catch (error) {
+        console.error(`Error al eliminar registros para la mesa con id_mesa ${id_mesa}: ${error.message}`);
+        return res.status(500).json({ error: error.message });
     }
 };
+
+
+
+
+

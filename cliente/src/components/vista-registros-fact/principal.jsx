@@ -15,37 +15,54 @@ import {
     Td,
     TdMesa
 } from "./styled";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const RegistroFactura = () => {
+    const navigate = useNavigate()
     const [facturas, setFacturas] = useState([]);
     const [filtros, setFiltros] = useState({ mesa: null, fecha: null });
     const [totalPrecios, setTotalPrecios] = useState(0);
     const [error, setError] = useState("");
+    const [lastAssignedIdMesa, setLastAssignedIdMesa] = useState(null); 
+
+    const cargarRegistros = async () => {
+        try {
+            let url = "http://localhost:3002/api/registro";
+            if (filtros.mesa && filtros.fecha) {
+                url = `http://localhost:3002/api/registro/por-mesa-y-fecha/${encodeURIComponent(filtros.mesa)}/${moment(filtros.fecha).format('YYYY-MM-DD')}`;
+            } else if (filtros.mesa) {
+                url = `http://localhost:3002/api/registro/por-mesa/${encodeURIComponent(filtros.mesa)}`;
+            } else if (filtros.fecha) {
+                url = `http://localhost:3002/api/registro/por-fecha/${moment(filtros.fecha).format('YYYY-MM-DD')}`;
+            }
+            const response = await axios.get(url);
+            const total = response.data.reduce((accumulator, factura) => {
+                return accumulator + parseFloat(factura.precio);
+            }, 0);
+            setFacturas(response.data);
+            setTotalPrecios(total);
+            // Guardar el último id_mesa asignado
+            if (response.data.length > 0) {
+                setLastAssignedIdMesa(response.data[0].id_mesa);
+            }
+        } catch (error) {
+            console.error("Error al cargar registros:", error);
+        }
+    };
 
     useEffect(() => {
-        const cargarRegistros = async () => {
-            try {
-                let url = "http://localhost:3002/api/registro";
-                if (filtros.mesa && filtros.fecha) {
-                    url = `http://localhost:3002/api/registro/por-mesa-y-fecha/${encodeURIComponent(filtros.mesa)}/${moment(filtros.fecha).format('YYYY-MM-DD')}`;
-                } else if (filtros.mesa) {
-                    url = `http://localhost:3002/api/registro/por-mesa/${encodeURIComponent(filtros.mesa)}`;
-                } else if (filtros.fecha) {
-                    url = `http://localhost:3002/api/registro/por-fecha/${moment(filtros.fecha).format('YYYY-MM-DD')}`;
-                }
-                const response = await axios.get(url);
-                const total = response.data.reduce((accumulator, factura) => {
-                    return accumulator + parseFloat(factura.precio);
-                }, 0);
-                setFacturas(response.data);
-                setTotalPrecios(total);
-            } catch (error) {
-                console.error("Error al cargar registros:", error);
-            }
-        };
-        cargarRegistros();
+        cargarRegistros(); 
     }, [filtros]);
+
+    const handleFiltroChange = (e) => {
+        const { name, value } = e.target;
+        console.log("Fecha seleccionada:", value)
+        setFiltros((prevFiltros) => ({
+            ...prevFiltros,
+            [name]: value.trim()
+        }));
+        setError("");
+    };
 
     const borrarFiltros = () => {
         setFiltros((prevFiltros) => ({
@@ -54,20 +71,18 @@ const RegistroFactura = () => {
             fecha: null,
         }));
     };
-    
-    const handleFiltroChange = (e) => {
-        const { name, value } = e.target;
-        console.log("Fecha seleccionada:", value) 
-        setFiltros((prevFiltros) => ({
-            ...prevFiltros,
-            [name]: value.trim()
-        }));
-        setError(""); 
-    };
 
     const handlePrintClick = () => {
         window.print();
     };
+
+    const handleBackToLastAssigned = () => {
+        if (lastAssignedIdMesa) {
+            // Redirigir a la última factura asignada
+            navigate(`/private/todofisica/factura/${lastAssignedIdMesa}`);
+        }
+    };
+
 
     return (
         <Background>
@@ -109,11 +124,12 @@ const RegistroFactura = () => {
                 </Table>
                 {error && <p>{error}</p>}
             </ContPrincipal>
-            <p style={{color:"white",fontSize:"20px"}}>Total en ventas: ${totalPrecios}</p>
+            <p style={{ color: "white", fontSize: "20px" }}>Total en ventas: ${totalPrecios}</p>
             <Link to="/private/todofisica/fisica">
                 <Boton style={{ marginTop: "20px" }}>Regresar al menú</Boton>
             </Link>
             <Boton style={{ marginTop: "20px" }} onClick={handlePrintClick}>Imprimir factura</Boton>
+            <Boton style={{ marginTop: "20px" }} onClick={handleBackToLastAssigned}>Volver a la última factura asignada</Boton>
         </Background>
     );
 };

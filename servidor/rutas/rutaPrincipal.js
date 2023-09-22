@@ -5,7 +5,7 @@ import {getPedidos,getPedido,createPedido,deletePedido,updatePedido} from "../co
 import { createPlato,createBebida, deletePlato,updatePlato, obtenerPlato, Compra, agregarPedido, Bebidas, obtenerBebida, PlatosSancocho, PlatosCorriente, informacion, deleteBebida, updateImagePlato,traerPlatos,updateImagebebida, updateBebida } from "../controllers/platos.controllers.js";
 import { getReserva,getReservas,createReservation,deleteReservation,updateReservation } from "../controllers/reserva.controllers.js";
 import { createDomicilio,getDomicilios,getDomicilio, deleteDomicilio, updateDomicilio } from "../controllers/domicilios.controllers.js";
-import { getMesa, createMesa, deleteOrdenPorId } from "../controllers/mesa.controller.js";
+import { getMesa, createMesa, deleteOrdenPorMesa } from "../controllers/mesa.controller.js";
 import multer from 'multer';
 import {dirname, extname, join} from 'path';
 import { fileURLToPath } from "url";
@@ -140,7 +140,8 @@ router.patch('/modificar/:id', updateDomicilio); //ruta para actualizar un domic
 
 router.get('/mesa/:id', getMesa);
 router.post('/crear-mesa', createMesa)
-router.delete('/orden_id/:id_orden', deleteOrdenPorId);
+router.delete('/mesa_id/:id_mesa', deleteOrdenPorMesa);
+
 
 router.get('/registro', getAllRegistros)
 router.get('/registro/:id', getRegistro)

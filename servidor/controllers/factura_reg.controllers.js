@@ -37,26 +37,30 @@ export const createNew = async (req, res) => {
 
         for (const productoData of productos) {
             const { producto, cantidad, precio } = productoData;
-            
+
             const fechaFactura = moment(fecha_factura, 'YYYY-MM-DD HH:mm:ss').format('YYYY-MM-DD HH:mm:ss');
             console.log("Fecha recibida en el backend:", fechaFactura);
-            
+
             const [rows] = await pool.query('INSERT INTO registros_fact (id_mesa, producto, cantidad, precio, fecha_factura) VALUES (?, ?, ?, ?, ?)', [id_mesa, producto, cantidad, precio, fechaFactura]);
             const lastInsertedId = rows.insertId;
-            insertIds.push(rows.insertId);
+            insertIds.push(lastInsertedId);
         }
+
+        // Obtén el último número de orden insertado
+        const numOrden = insertIds[insertIds.length - 1];
 
         res.send({
             insertIds: insertIds,
             id_mesa: id_mesa,
             productos: productos,
             fecha_factura: fecha_factura,
-            lastInsertedId: lastInsertedId
+            numOrden: numOrden // Devuelve el número de orden en la respuesta
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
+
 
 
 
