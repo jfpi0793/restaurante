@@ -14,15 +14,18 @@ import axios from "axios";
 import moment from 'moment';
 import { Pago } from "../payu/principal";
 
-const Factura = ({ mesa }) => {
-    const navigate = useNavigate()
+const Factura = (props) => {
+    const { mesa } = props;
+    console.log("Valor de mesa:", mesa);
+    const navigate = useNavigate();
     const [total, setTotal] = useState(0);
     const [filteredReservas, setFilteredReservas] = useState([]);
-    const [lastInsertedId, setLastInsertedId] = useState(null)
-    const [redirectToPayU,setRedirectToPayU] = useState(false)
-    const [numMesa, setNumMesa] = useState(null); // Cambio de numOrden a numMesa
+    const [lastInsertedId, setLastInsertedId] = useState(null);
+    const [redirectToPayU, setRedirectToPayU] = useState(false);
+    const [numMesa, setNumMesa] = useState(0);
     const { mesaData } = useDataState();
     const mesaSeleccionada = mesa ?? mesaData[0]?.id_mesa;
+    console.log("Valor de mesa seleccionada:", mesaSeleccionada);
 
     useEffect(() => {
         setFilteredReservas(mesaData);
@@ -30,7 +33,7 @@ const Factura = ({ mesa }) => {
     }, [mesaData]);
 
     useEffect(() => {
-        mesaFunctions.getAllMesa(mesa)
+        mesaFunctions.getAllMesa(mesaData)
             .then(response => {
                 const convertedResponse = response.map(item => ({
                     ...item,
@@ -41,7 +44,7 @@ const Factura = ({ mesa }) => {
                 calculateTotal();
             })
             .catch(error => console.error('Error fetching data:', error));
-    }, [mesa]);
+    }, [mesaData]);
 
     const calculateTotal = () => {
         const pedidosConProductos = mesaData.filter(
@@ -57,6 +60,14 @@ const Factura = ({ mesa }) => {
         setTotal(totalAmount);
     };
 
+    const handleBackToOrdenClick = () => {
+        navigate("/private/todofisica/fisica");
+    };
+
+    const handlePayUClick = () => {
+        setRedirectToPayU(true);
+    };
+
     const handleIrRegistroFact = async () => {
         try {
             const fecha_factura = moment().format('YYYY/MM/DD, HH:mm:ss a');
@@ -67,26 +78,17 @@ const Factura = ({ mesa }) => {
                 fecha_factura,
             }));
             const facturaData = {
-                id_mesa: mesaSeleccionada, 
+                id_mesa: mesaSeleccionada,
                 productos,
                 fecha_factura,
             };
-
-            // Asegúrate de que numMesa sea un valor numérico
-            const idMesaNumerico = parseInt(numMesa, 10);
-            if (!isNaN(idMesaNumerico)) {
-                facturaData.id_mesa = idMesaNumerico;
-            }
-
             // Realiza una solicitud POST para registrar la factura junto con id_mesa
             const response = await axios.post('http://localhost:3002/api/registro', facturaData);
             console.log('Respuesta del servidor:', response.data);
-
             if (response.status === 200) {
                 console.log('La factura se ha registrado correctamente.');
-
                 const id_orden = response.data.numOrden;
-                console.log('Valor de id_orden:', id_orden); 
+                console.log('Valor de id_orden:', id_orden);
                 if (id_orden !== null && id_orden !== undefined) {
                     setNumMesa(id_orden);
                     await handleEliminarRegistros();
@@ -104,23 +106,22 @@ const Factura = ({ mesa }) => {
     const handleEliminarRegistros = async () => {
         try {
             console.log('Entrando en handleEliminarRegistros');
-            console.log('Valor de idMesa antes de la conversión:', numMesa);
-            const idMesaInt = parseInt(numMesa);
-            console.log('Valor de idMesaInt:', idMesaInt);
-
-            if (!isNaN(idMesaInt)) {
+            console.log('Valor de idMesa antes de la conversión:', mesaSeleccionada);
+            if (!isNaN(mesaSeleccionada)) {
+                const idMesaInt = parseInt(mesaSeleccionada);
+                console.log('Valor de idMesaInt:', idMesaInt);
                 const response = await axios.delete(`http://localhost:3002/api/mesa_id/${idMesaInt}`);
                 console.log('Número de mesa eliminado:', idMesaInt);
                 console.log(response);
                 if (response.status === 200) {
                     console.log('Registros eliminados correctamente.');
-                    // Estableces el id_mesa eliminado en el estado
                     setNumMesa(idMesaInt);
+                    navigate('/private/todofisica/fisica');
                 } else {
                     console.error('Error al eliminar registros:', response.statusText);
                 }
             } else {
-                console.error('idMesa no es un número válido.');
+                console.error('mesaSeleccionada no es un número válido.');
             }
         } catch (error) {
             console.error('Error al eliminar registros:', error);
@@ -141,39 +142,37 @@ const Factura = ({ mesa }) => {
                 console.error('Error al obtener el último ID:', error);
             }
         };
-    
         obtenerUltimoId();
     }, []);
 
     return (
         <Background>
             <ContPrincipal>
-                <h1 style={{ textAlign: "center" , color:"white" }}>Factura de Mesa {mesaSeleccionada}</h1>
-                <BotonImprimir style={{marginLeft: "20px"}} onClick={() => navigate('/private/todofisica/mesa')}>Regresar</BotonImprimir>
+                <h1 style={{ textAlign: "center", color: "white" }}>Factura de Mesa {mesaSeleccionada}</h1>
+                <BotonImprimir style={{ marginLeft: "20px" }} onClick={() => navigate('/private/todofisica/mesa')}>Regresar</BotonImprimir>
                 <ContFactura>
                     <table>
                         <thead>
                             <tr>
-                                <th style={{backgroundColor:"transparent",color:"white"}}>PRODUCTO</th>
-                                <th style={{backgroundColor:"transparent",color:"white"}}>CANTIDAD</th>
-                                <th style={{backgroundColor:"transparent",color:"white"}}>PRECIO</th>
+                                <th style={{ backgroundColor: "transparent", color: "white" }}>PRODUCTO</th>
+                                <th style={{ backgroundColor: "transparent", color: "white" }}>CANTIDAD</th>
+                                <th style={{ backgroundColor: "transparent", color: "white" }}>PRECIO</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredReservas.map((pedido, index) => (
                                 <tr key={index}>
-                                    <td style={{color:"white"}}>{pedido.producto}</td>
-                                    <td style={{color:"white"}}>{pedido.cantidad}</td>
-                                    <td style={{color:"white"}}>{pedido.precio}</td>
+                                    <td style={{ color: "white" }}>{pedido.producto}</td>
+                                    <td style={{ color: "white" }}>{pedido.cantidad}</td>
+                                    <td style={{ color: "white" }}>{pedido.precio}</td>
                                 </tr>
                             ))}
-                            
                         </tbody>
                     </table>
                 </ContFactura>
                 <ResPrecios>
                     <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                        <p style={{ fontWeight: 'bolder', fontSize: 'x-large', fontStyle: 'italic', margin: '0' , color:"white" }}>Total: $ {total}</p>
+                        <p style={{ fontWeight: 'bolder', fontSize: 'x-large', fontStyle: 'italic', margin: '0', color: "white" }}>Total: $ {total}</p>
                     </div>
                     <Pago total={total} lastInsertedIdProp={parseInt(lastInsertedId, 10)} />
                 </ResPrecios>
@@ -181,6 +180,8 @@ const Factura = ({ mesa }) => {
                     <BotonImprimir onClick={handlePrintClick}>Imprimir factura</BotonImprimir>
                     <Link to="/private/todofisica/registro-fact">
                         <BotonImprimir id="registrarFacturaButton" onClick={handleIrRegistroFact}>Ir a registro de facturas</BotonImprimir>
+                        <BotonImprimir onClick={handleBackToOrdenClick}>Regresar al menú</BotonImprimir>
+                        <BotonImprimir onClick={handlePayUClick}>Pagar con PayU</BotonImprimir>
                         <BotonImprimir onClick={handleEliminarRegistros} style={{ marginTop: '20px' }}> Eliminar Registros de la Factura </BotonImprimir>
                     </Link>
                 </ContBoton>
@@ -189,4 +190,4 @@ const Factura = ({ mesa }) => {
     );
 };
 
-export default Factura
+export default Factura;

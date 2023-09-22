@@ -76,9 +76,8 @@ const RegistroFactura = () => {
         window.print();
     };
 
-    const handleBackToLastAssigned = () => {
+    const handleBackToLastAssigned = async () => {
         if (lastAssignedIdMesa) {
-            // Redirigir a la última factura asignada
             navigate(`/private/todofisica/factura/${lastAssignedIdMesa}`);
         }
     };
