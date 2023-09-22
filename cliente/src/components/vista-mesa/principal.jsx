@@ -26,7 +26,6 @@ const VistaMesa = () => {
   
 
   useEffect(() => {
-    console.log('Valor de selectedTableIndex:', selectedTableIndex);
   }, [selectedTableIndex]);
 
   useEffect(() => {

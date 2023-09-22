@@ -41,7 +41,6 @@ const RegistroFactura = () => {
             }, 0);
             setFacturas(response.data);
             setTotalPrecios(total);
-            // Guardar el último id_mesa asignado
             if (response.data.length > 0) {
                 setLastAssignedIdMesa(response.data[0].id_mesa);
             }
@@ -56,7 +55,6 @@ const RegistroFactura = () => {
 
     const handleFiltroChange = (e) => {
         const { name, value } = e.target;
-        console.log("Fecha seleccionada:", value)
         setFiltros((prevFiltros) => ({
             ...prevFiltros,
             [name]: value.trim()

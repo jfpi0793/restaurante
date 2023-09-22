@@ -16,7 +16,6 @@ import { Pago } from "../payu/principal";
 
 const Factura = (props) => {
     const { mesa } = props;
-    console.log("Valor de mesa:", mesa);
     const navigate = useNavigate();
     const [total, setTotal] = useState(0);
     const [filteredReservas, setFilteredReservas] = useState([]);
@@ -25,7 +24,6 @@ const Factura = (props) => {
     const [numMesa, setNumMesa] = useState(0);
     const { mesaData } = useDataState();
     const mesaSeleccionada = mesa ?? mesaData[0]?.id_mesa;
-    console.log("Valor de mesa seleccionada:", mesaSeleccionada);
 
     useEffect(() => {
         setFilteredReservas(mesaData);
@@ -82,13 +80,9 @@ const Factura = (props) => {
                 productos,
                 fecha_factura,
             };
-            // Realiza una solicitud POST para registrar la factura junto con id_mesa
             const response = await axios.post('http://localhost:3002/api/registro', facturaData);
-            console.log('Respuesta del servidor:', response.data);
             if (response.status === 200) {
-                console.log('La factura se ha registrado correctamente.');
                 const id_orden = response.data.numOrden;
-                console.log('Valor de id_orden:', id_orden);
                 if (id_orden !== null && id_orden !== undefined) {
                     setNumMesa(id_orden);
                     await handleEliminarRegistros();
@@ -105,16 +99,10 @@ const Factura = (props) => {
 
     const handleEliminarRegistros = async () => {
         try {
-            console.log('Entrando en handleEliminarRegistros');
-            console.log('Valor de idMesa antes de la conversión:', mesaSeleccionada);
             if (!isNaN(mesaSeleccionada)) {
                 const idMesaInt = parseInt(mesaSeleccionada);
-                console.log('Valor de idMesaInt:', idMesaInt);
                 const response = await axios.delete(`http://localhost:3002/api/mesa_id/${idMesaInt}`);
-                console.log('Número de mesa eliminado:', idMesaInt);
-                console.log(response);
                 if (response.status === 200) {
-                    console.log('Registros eliminados correctamente.');
                     setNumMesa(idMesaInt);
                     navigate('/private/todofisica/fisica');
                 } else {
